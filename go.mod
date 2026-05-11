@@ -1,0 +1,3 @@
+module github.com/tmuelli/blog-aggregator
+
+go 1.25.5
