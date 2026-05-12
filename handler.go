@@ -1,0 +1,100 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+	"context"
+	"time"
+	"log"
+	"database/sql"
+
+	"github.com/google/uuid"
+	"github.com/tmuelli/blog-aggregator/internal/database"
+)
+
+func handlerLogin(s *state, cmd command) error {
+	if len(cmd.args) == 0 {
+		return errors.New("Invalid arguments for login command.")
+	}
+
+	if s == nil {
+		return errors.New("Internal error - Invalid state")
+	}
+
+	// check if user exists
+	if _, err := s.db.GetUserByName(context.Background(), sql.NullString{String: cmd.args[0], Valid: true}); err != nil {
+		log.Fatal(err)
+	}
+
+	s.cfg.SetUser(cmd.args[0])
+	fmt.Println("User was set")
+	return nil
+}
+
+func handlerRegister(s *state, cmd command) error {
+	if len(cmd.args) == 0 {
+		return errors.New("Invalid arguments for register command.")
+	}
+
+	if s == nil {
+		return errors.New("Internal error - Invalid state")
+	}
+
+	// check if user exists
+	_, err := s.db.GetUserByName(context.Background(), sql.NullString{String: cmd.args[0], Valid: true})
+	if  err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// user not exist yet
+		} else {
+			log.Fatal(err)
+		}
+	}
+
+	if err == nil {
+		// user already exists
+		log.Fatal(errors.New("User is already registered!"))
+	}
+
+	createdUser, err := s.db.CreateUser(context.Background(), database.CreateUserParams{
+		ID: 			uuid.NullUUID{UUID: uuid.New(), Valid: true},
+		CreatedAt:		sql.NullTime{Time: time.Now(), Valid: true},
+		UpdatedAt:		sql.NullTime{Time: time.Now(), Valid: true},
+		Name:			sql.NullString{String: cmd.args[0], Valid: true},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// set user to config
+	s.cfg.SetUser(createdUser.Name.String)
+	fmt.Printf("User %s was successfully created at %v with id %v\n", createdUser.Name.String, createdUser.CreatedAt.Time, createdUser.ID.UUID)
+	return nil
+}
+
+func handlerReset(s *state, cmd command) error {
+	// reset users
+	err := s.db.DeleteUsers(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return nil
+}
+
+func handlerGetUsers(s *state, cmd command) error {
+	// get all users
+	users, err := s.db.GetUsers(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, u := range users {
+		if u.Name.String == s.cfg.CurrentUserName {
+			fmt.Printf("* %s (current)\n", u.Name.String)
+		} else {
+			fmt.Println("*", u.Name.String)
+		}
+	}
+
+	return nil
+}

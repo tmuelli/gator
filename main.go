@@ -3,25 +3,55 @@ package main
 import (
 	"log"
 	"errors"
-	"fmt"
+	"os"
+	"database/sql"
 
+	_ "github.com/lib/pq"
 	"github.com/tmuelli/blog-aggregator/internal/config"
+	"github.com/tmuelli/blog-aggregator/internal/database"
 )
 
 func main() {
+	cmds := commands{
+		cmdMap: make(map[string]func(*state, command) error),
+	}
+
+	cmds.register("login", handlerLogin)
+	cmds.register("register", handlerRegister)
+	cmds.register("reset", handlerReset)
+	cmds.register("users", handlerGetUsers)
+
+	// read configuration
 	cfg := config.Read()
 	if cfg == nil {
 		log.Fatal(errors.New("No configuration could be read"))
 	}
 
-	cfg.SetUser("tmmue")
-
-
-	cfg = config.Read()
-	if cfg == nil {
-		log.Fatal(errors.New("No configuration could be read"))
+	// open database
+	db, err := sql.Open("postgres", cfg.DbUrl)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	fmt.Println("User name:", cfg.CurrentUserName)
-	fmt.Println("Database url:", cfg.DbUrl)
+	// create db queries
+	dbQueries := database.New(db)
+
+	s := state{
+		db: dbQueries,
+		cfg: cfg,
+	}
+
+	if len(os.Args) < 2 {
+		log.Fatal(errors.New("To few arguments"))
+	}
+
+	cmd := command{
+		name: os.Args[1],
+		args: os.Args[2:],
+	}
+
+	err = cmds.run(&s, cmd)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
