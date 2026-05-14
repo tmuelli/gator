@@ -23,6 +23,8 @@ func main() {
 	cmds.register("agg", handlerAggregate)
 	cmds.register("addfeed", handlerAddFeed)
 	cmds.register("feeds", handlerListFeeds)
+	cmds.register("follow", handlerFollowFeed)
+	cmds.register("following", handlerFollowing)
 
 	// read configuration
 	cfg := config.Read()

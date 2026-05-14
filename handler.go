@@ -136,6 +136,15 @@ func handlerAddFeed(s *state, cmd command) error {
 		log.Fatal(err)
 	}
 
+	// create new feed follow
+	_, err = s.db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
+		UserID:		currentUser.ID,
+		FeedID:		createFeed.ID,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	fmt.Printf("%v\n", createFeed)
 	return nil
 }
@@ -151,5 +160,59 @@ func handlerListFeeds(s *state, cmd command) error {
 		fmt.Printf("%s from %s with url %s\n", f.Feedname.String, f.Username.String, f.Feedurl.String)
 	}
 
+	return nil
+}
+
+func handlerFollowFeed(s *state, cmd command) error {
+	if len(cmd.args) < 1 {
+		return errors.New("Invalid arguments for follow command.")
+	}
+
+	if s == nil {
+		return errors.New("Internal error - Invalid state")
+	}
+
+	// get current user
+	currentUser, err := s.db.GetUserByName(context.Background(), sql.NullString{String: s.cfg.CurrentUserName, Valid: true})
+	if  err != nil {
+		log.Fatal(err)
+	}
+
+	// get feed by url
+	feed, err := s.db.GetFeedByUrl(context.Background(), sql.NullString{String: cmd.args[0], Valid: true})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// create new feed follow
+	feedFollow, err := s.db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
+		UserID:		currentUser.ID,
+		FeedID:		feed.ID,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("User %s follows feed %s now.\n", feedFollow.Username.String, feedFollow.Feedname.String)
+	return nil
+}
+
+func handlerFollowing(s *state, cmd command) error {
+	// get current user
+	currentUser, err := s.db.GetUserByName(context.Background(), sql.NullString{String: s.cfg.CurrentUserName, Valid: true})
+	if  err != nil {
+		log.Fatal(err)
+	}
+
+	// get feeds the user is following
+	feedFollows, err := s.db.GetFeedFollowsByUser(context.Background(), currentUser.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, ff := range feedFollows {
+		fmt.Println(ff.Feedname)
+	}
+	
 	return nil
 }
