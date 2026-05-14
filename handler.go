@@ -56,7 +56,7 @@ func handlerRegister(s *state, cmd command) error {
 	}
 
 	createdUser, err := s.db.CreateUser(context.Background(), database.CreateUserParams{
-		ID: 			uuid.NullUUID{UUID: uuid.New(), Valid: true},
+		ID: 			uuid.New(),
 		CreatedAt:		sql.NullTime{Time: time.Now(), Valid: true},
 		UpdatedAt:		sql.NullTime{Time: time.Now(), Valid: true},
 		Name:			sql.NullString{String: cmd.args[0], Valid: true},
@@ -67,7 +67,7 @@ func handlerRegister(s *state, cmd command) error {
 
 	// set user to config
 	s.cfg.SetUser(createdUser.Name.String)
-	fmt.Printf("User %s was successfully created at %v with id %v\n", createdUser.Name.String, createdUser.CreatedAt.Time, createdUser.ID.UUID)
+	fmt.Printf("User %s was successfully created at %v with id %v\n", createdUser.Name.String, createdUser.CreatedAt.Time, createdUser.ID)
 	return nil
 }
 
@@ -108,5 +108,34 @@ func handlerAggregate(s *state, cmd command) error {
 
 	fmt.Printf("%v\n", feed)
 
+	return nil
+}
+
+func handlerAddFeed(s *state, cmd command) error {
+	if len(cmd.args) < 2 {
+		return errors.New("Invalid arguments for addfeed command.")
+	}
+
+	if s == nil {
+		return errors.New("Internal error - Invalid state")
+	}
+
+	// get current user
+	currentUser, err := s.db.GetUserByName(context.Background(), sql.NullString{String: s.cfg.CurrentUserName, Valid: true})
+	if  err != nil {
+		log.Fatal(err)
+	}
+
+	// create feed
+	createFeed, err := s.db.CreateFeed(context.Background(), database.CreateFeedParams{
+		Name:		sql.NullString{String: cmd.args[0], Valid: true},
+		Url:		sql.NullString{String: cmd.args[1], Valid: true},
+		UserID:		currentUser.ID,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("%v\n", createFeed)
 	return nil
 }

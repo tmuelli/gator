@@ -21,6 +21,7 @@ func main() {
 	cmds.register("reset", handlerReset)
 	cmds.register("users", handlerGetUsers)
 	cmds.register("agg", handlerAggregate)
+	cmds.register("addfeed", handlerAddFeed)
 
 	// read configuration
 	cfg := config.Read()
