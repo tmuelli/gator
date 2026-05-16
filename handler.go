@@ -7,6 +7,7 @@ import (
 	"time"
 	"log"
 	"database/sql"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/tmuelli/blog-aggregator/internal/database"
@@ -22,9 +23,9 @@ func handlerLogin(s *state, cmd command) error {
 	}
 
 	// check if user exists
-	if _, err := s.db.GetUserByName(context.Background(), sql.NullString{String: cmd.args[0], Valid: true}); err != nil {
-		log.Fatal(err)
-	}
+	// if _, err := s.db.GetUserByName(context.Background(), sql.NullString{String: cmd.args[0], Valid: true}); err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	s.cfg.SetUser(cmd.args[0])
 	fmt.Println("User was set")
@@ -231,6 +232,37 @@ func handlerUnfollowFeed(s *state, cmd command, user database.User) error {
 	})
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	return nil
+}
+
+func handlerBrowse(s *state, cmd command, user database.User) error {
+	var err error
+	limit := 2
+
+	if len(cmd.args) > 0 {
+		limit, err = strconv.Atoi(cmd.args[0])
+		if err != nil {
+			return errors.New("Invalid limit argument - cannot convert to integer")
+		}
+	}
+
+	if s == nil {
+		return errors.New("Internal error - Invalid state")
+	}
+
+	// get all posts for user
+	posts, err := s.db.GetPostsByUser(context.Background(), database.GetPostsByUserParams{
+		UserID:		user.ID,
+		Limit:		int32(limit),
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, p := range posts {
+		fmt.Printf("%v\n", p)
 	}
 
 	return nil

@@ -7,6 +7,11 @@ import (
 	"html"
 	"io"
 	"fmt"
+	"database/sql"
+
+	"github.com/lib/pq"
+	"github.com/tmuelli/blog-aggregator/internal/convert"
+	"github.com/tmuelli/blog-aggregator/internal/database"
 )
 
 func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
@@ -76,8 +81,21 @@ func scrapFeeds(s *state) {
 
 	fmt.Println("Fetched feed:", rssFeed.Channel.Title, "- items:", len(rssFeed.Channel.Item))
 
-	// print feed content
+	// insert feed posts
 	for _, item := range rssFeed.Channel.Item {
-		fmt.Println(item.Title)
+		_, err := s.db.CreatePost(context.Background(), database.CreatePostParams{
+			Title:			sql.NullString{String: item.Title, Valid: true},
+			Url:			sql.NullString{String: item.Link, Valid: true},
+			Description:	sql.NullString{String: item.Description, Valid: true},
+			PublishedAt:	convert.DateStringToSqlNullTime(item.PubDate),
+			FeedID:			feed.ID,
+		})
+		if err != nil {
+			if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+				continue
+			}
+
+			fmt.Println("Error creating post:", err)
+		}
 	}
 }

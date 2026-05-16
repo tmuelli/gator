@@ -26,6 +26,7 @@ func main() {
 	cmds.register("follow", middlewareLoggedIn(handlerFollowFeed))
 	cmds.register("following", middlewareLoggedIn(handlerFollowing))
 	cmds.register("unfollow", middlewareLoggedIn(handlerUnfollowFeed))
+	cmds.register("browse", middlewareLoggedIn(handlerBrowse))
 
 	// read configuration
 	cfg := config.Read()
