@@ -198,3 +198,29 @@ func handlerFollowing(s *state, cmd command, user database.User) error {
 	
 	return nil
 }
+
+func handlerUnfollowFeed(s *state, cmd command, user database.User) error {
+	if len(cmd.args) < 1 {
+		return errors.New("Invalid arguments for unfollow command.")
+	}
+
+	if s == nil {
+		return errors.New("Internal error - Invalid state")
+	}
+
+	// get feed by url
+	feed, err := s.db.GetFeedByUrl(context.Background(), sql.NullString{String: cmd.args[0], Valid: true})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = s.db.UnfollowFeed(context.Background(), database.UnfollowFeedParams{
+		UserID:		user.ID,
+		FeedID:		feed.ID,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return nil
+}
