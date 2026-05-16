@@ -111,7 +111,7 @@ func handlerAggregate(s *state, cmd command) error {
 	return nil
 }
 
-func handlerAddFeed(s *state, cmd command) error {
+func handlerAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.args) < 2 {
 		return errors.New("Invalid arguments for addfeed command.")
 	}
@@ -120,17 +120,11 @@ func handlerAddFeed(s *state, cmd command) error {
 		return errors.New("Internal error - Invalid state")
 	}
 
-	// get current user
-	currentUser, err := s.db.GetUserByName(context.Background(), sql.NullString{String: s.cfg.CurrentUserName, Valid: true})
-	if  err != nil {
-		log.Fatal(err)
-	}
-
 	// create feed
 	createFeed, err := s.db.CreateFeed(context.Background(), database.CreateFeedParams{
 		Name:		sql.NullString{String: cmd.args[0], Valid: true},
 		Url:		sql.NullString{String: cmd.args[1], Valid: true},
-		UserID:		currentUser.ID,
+		UserID:		user.ID,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -138,7 +132,7 @@ func handlerAddFeed(s *state, cmd command) error {
 
 	// create new feed follow
 	_, err = s.db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
-		UserID:		currentUser.ID,
+		UserID:		user.ID,
 		FeedID:		createFeed.ID,
 	})
 	if err != nil {
@@ -163,19 +157,13 @@ func handlerListFeeds(s *state, cmd command) error {
 	return nil
 }
 
-func handlerFollowFeed(s *state, cmd command) error {
+func handlerFollowFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.args) < 1 {
 		return errors.New("Invalid arguments for follow command.")
 	}
 
 	if s == nil {
 		return errors.New("Internal error - Invalid state")
-	}
-
-	// get current user
-	currentUser, err := s.db.GetUserByName(context.Background(), sql.NullString{String: s.cfg.CurrentUserName, Valid: true})
-	if  err != nil {
-		log.Fatal(err)
 	}
 
 	// get feed by url
@@ -186,7 +174,7 @@ func handlerFollowFeed(s *state, cmd command) error {
 
 	// create new feed follow
 	feedFollow, err := s.db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
-		UserID:		currentUser.ID,
+		UserID:		user.ID,
 		FeedID:		feed.ID,
 	})
 	if err != nil {
@@ -197,15 +185,9 @@ func handlerFollowFeed(s *state, cmd command) error {
 	return nil
 }
 
-func handlerFollowing(s *state, cmd command) error {
-	// get current user
-	currentUser, err := s.db.GetUserByName(context.Background(), sql.NullString{String: s.cfg.CurrentUserName, Valid: true})
-	if  err != nil {
-		log.Fatal(err)
-	}
-
+func handlerFollowing(s *state, cmd command, user database.User) error {
 	// get feeds the user is following
-	feedFollows, err := s.db.GetFeedFollowsByUser(context.Background(), currentUser.ID)
+	feedFollows, err := s.db.GetFeedFollowsByUser(context.Background(), user.ID)
 	if err != nil {
 		log.Fatal(err)
 	}
