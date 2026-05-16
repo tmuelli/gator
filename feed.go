@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"html"
 	"io"
+	"fmt"
 )
 
 func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
@@ -49,4 +50,34 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	}
 	
 	return &feed, nil
+}
+
+func scrapFeeds(s *state) {
+	// get next feed to fetch
+	feed, err := s.db.GetNextFeedToFetch(context.Background())
+	if err != nil {
+		fmt.Println("Log - error:", err)
+		return
+	}
+
+	// mark feed as fetched
+	err = s.db.MarkFeedFetched(context.Background(), feed.ID)
+	if err != nil {
+		fmt.Println("Log - error:", err)
+		return
+	}
+
+	// fetch the feed
+	rssFeed, err := fetchFeed(context.Background(), feed.Url.String)
+	if err != nil {
+		fmt.Println("Log - error:", err)
+		return
+	}
+
+	fmt.Println("Fetched feed:", rssFeed.Channel.Title, "- items:", len(rssFeed.Channel.Item))
+
+	// print feed content
+	for _, item := range rssFeed.Channel.Item {
+		fmt.Println(item.Title)
+	}
 }

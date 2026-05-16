@@ -100,13 +100,24 @@ func handlerGetUsers(s *state, cmd command) error {
 }
 
 func handlerAggregate(s *state, cmd command) error {
-	// call and fetch rss feed
-	feed, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
-	if err != nil {
-		return err
+	if len(cmd.args) < 1 {
+		return errors.New("Invalid arguments for agg command.")
 	}
 
-	fmt.Printf("%v\n", feed)
+	if s == nil {
+		return errors.New("Internal error - Invalid state")
+	}
+
+	// get duration argument
+	interval, err := time.ParseDuration(cmd.args[0])
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ticker := time.NewTicker(interval)
+	for ; ; <-ticker.C {
+		scrapFeeds(s)
+	}
 
 	return nil
 }
